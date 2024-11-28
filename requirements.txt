@@ -1,0 +1,11 @@
+#ANN
+numpy
+tqdm
+tensorboard
+ml-collections
+jittor
+pandas
+scipy
+matplotlib
+torch
+torchvision
