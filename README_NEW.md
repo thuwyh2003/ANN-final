@@ -36,4 +36,4 @@ TODO:
 5. [ ]  Multi-head Attention
 6. [ ]  PSM（part attention）
 
-持续更新memo.py，这是我在操作的时候总结的一些问题，hopefully，能给大家提供帮助
+持续更新memo，这是我在操作的时候总结的一些问题，hopefully，能给大家提供帮助
