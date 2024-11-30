@@ -22,3 +22,16 @@ scipy.misc.imread()版本过低，需要换成pillow库。我已经修改过，�
 #### 运行训练代码
 
 CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --nnodes=1  --nproc_per_node=4   train.py --dataset CUB_200_2011 --split overlap --num_steps 10000 --fp16 --name sample_run --pretrained_dir /home/wyh/ANN/TransFG/imagenet21k_ViT-B_16.npz      分布式训练代码我已修改，可直接pull下来
+
+## 11.29
+
+汪钰涵  修改TransFG的models/modeling.py的代码
+
+TODO:
+
+1. [X]  MLP Block
+2. [X]  Encoder Block
+3. [ ]  Vision Transformer
+4. [ ]  Patch embedding
+5. [ ]  Multi-head Attention
+5. [ ]  PSM（part attention）
