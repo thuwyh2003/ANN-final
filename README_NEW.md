@@ -34,4 +34,6 @@ TODO:
 3. [ ]  Vision Transformer
 4. [ ]  Patch embedding
 5. [ ]  Multi-head Attention
-5. [ ]  PSM（part attention）
+6. [ ]  PSM（part attention）
+
+持续更新memo.py，这是我在操作的时候总结的一些问题，hopefully，能给大家提供帮助
