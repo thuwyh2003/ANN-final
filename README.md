@@ -1,4 +1,4 @@
-# ANN-Final          J-TransFG: A Transformer Architecture for Fine-grained Recognition Implemented in Jittor Framework
+# J-TransFG: A Transformer Architecture for Fine-grained Recognition Implemented in Jittor Framework
 
 ## 这是2024-2025秋季学期《人工神经网络》大作业的仓库
 
