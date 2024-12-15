@@ -25,7 +25,7 @@ MLP_NORM = "LayerNorm_2"
 
 def swish(x):
     return x*jt.sigmoid(x)
-ACT2FN={"gelu":nn.GELU,"relu":nn.RELU,"swish":swish}
+ACT2FN={"gelu":nn.gelu,"relu":nn.relu,"swish":swish}
 
 
 def np2th(weights, conv=False):

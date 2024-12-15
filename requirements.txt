@@ -4,6 +4,7 @@ tqdm
 tensorboard
 ml-collections
 jittor
+jittorvis
 pandas
 scipy
 matplotlib

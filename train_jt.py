@@ -16,14 +16,15 @@ from datetime import timedelta
 
 from tqdm import tqdm
 #from torch.utils.tensorboard import SummaryWriter
-from jittor import vis
+# from jittor import vis
+import jittorvis as vis
 #from apex import amp
 #from apex.parallel import DistributedDataParallel as DDP
 
 from models.modeling_jt import VisionTransformer, CONFIGS
-from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
-from utils.data_utils import get_loader
-from utils.dist_util import get_world_size
+from utils.scheduler_jt import WarmupLinearSchedule, WarmupCosineSchedule
+from utils.data_utils_jt import get_loader
+from utils.dist_util_jt import get_world_size
 
 logger = logging.getLogger(__name__)
 

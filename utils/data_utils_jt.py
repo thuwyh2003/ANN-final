@@ -10,14 +10,13 @@ import jittor as jt
 import jittor.transform as transforms
 from jittor.dataset import Dataset,DataLoader, SequentialSampler, RandomSampler
 
-from .dataset import CUB, CarsDataset, NABirds, dogs, INat2017
+from .dataset_jt import CUB, CarsDataset, NABirds, dogs, INat2017
 from .autoaugment import AutoAugImageNetPolicy
 
 logger = logging.getLogger(__name__)
 
 from jittor import distributed as dist
 import numpy as np
-
 class DistributedSampler:
     def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True):
         if num_replicas is None:
