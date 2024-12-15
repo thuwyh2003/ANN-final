@@ -37,3 +37,10 @@ TODO:
 6. [ ]  PSM（part attention）
 
 持续更新memo，这是我在操作的时候总结的一些问题，hopefully，能给大家提供帮助
+
+## 12.15
+崔灏睿 修改部分bug
+分布式训练代码api存在问题
+```
+CUDA_VISIBLE_DEVICES=0 torchrun --nnodes=1  --nproc_per_node=4   train_jt.py --dataset CUB_200_2011 --split overlap --num_steps 10000 --fp16 --name sample_run --pretrained_dir pretrained_dir/imagenet21k_ViT-B_32.npz
+```
