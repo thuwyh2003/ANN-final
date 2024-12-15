@@ -404,16 +404,19 @@ def main():
     args.nprocs = torch.cuda.device_count()'''
     if args.local_rank == -1:
         if jittor.backends.cuda.is_available():
-            device = jittor.set_device("cuda")
+            jittor.flags.use_cuda = 1 
+            device = jittor.core.Device(jittor.core.CUDA, 0) if jittor.backends.cuda.is_available() else jittor.core.Device(jittor.core.CPU)
+            args.n_gpu = jittor.cuda.device_count()
         else:
-            device = jittor.set_device("cpu")
-        args.n_gpu = jittor.cuda.device_count()
-        print(args.n_gpu)
+            jittor.flags.use_cuda = 0
+            device = jittor.core.Device(jittor.core.CPU)
+            args.n_gpu = 0
+        print(f"Number of GPUs available: {args.n_gpu}")
         breakpoint()
-    else:  # Initializes the distributed backend which will take care of synchronizing nodes/GPUs
-        jittor.set_device(args.local_rank)
-        device = jittor.set_device(f"cuda:{args.local_rank}")
-        jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
+    else:
+        jittor.flags.use_cuda = 1
+        device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
+        # jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
         args.n_gpu = 1
     args.device = device
     args.nprocs = jittor.cuda.device_count()

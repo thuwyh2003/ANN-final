@@ -1,14 +1,13 @@
-from jittor import distributed as dist
-
+import jittor as jt
 def get_rank():
-    if not dist.is_initialized():
+    if not jt.rank_is_distributed():
         return 0
-    return dist.get_rank()
+    return jt.rank()
 
 def get_world_size():
-    if not dist.is_initialized():
+    if not jt.rank_is_distributed():
         return 1
-    return dist.get_world_size()
+    return jt.world_size()
 
 def is_main_process():
     return get_rank() == 0
