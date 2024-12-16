@@ -388,8 +388,9 @@ def main():
     args.data_root = '{}/{}'.format(args.data_root, args.dataset)
     # Setup CUDA, GPU & distributed training
     args.local_rank = int(os.environ.get('LOCAL_RANK', -1))     #WYH   不需要手动传输local_rank参数了。
-    
-    '''if args.local_rank == -1:
+    print("local_rank",args.local_rank)
+    '''
+    if args.local_rank == -1:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         args.n_gpu = torch.cuda.device_count()
         print(args.n_gpu)
@@ -402,32 +403,33 @@ def main():
         args.n_gpu = 1
     args.device = device
     args.nprocs = torch.cuda.device_count()'''
+    
+   
+    from datetime import timedelta
+
     if args.local_rank == -1:
         if jittor.backends.cuda.is_available():
             jittor.flags.use_cuda = 1 
-            device = jittor.core.Device(jittor.core.CUDA, 0) if jittor.backends.cuda.is_available() else jittor.core.Device(jittor.core.CPU)
-            args.n_gpu = jittor.cuda.device_count()
+            args.n_gpu = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
         else:
             jittor.flags.use_cuda = 0
-            device = jittor.core.Device(jittor.core.CPU)
-            args.n_gpu = 0
+            args.n_gpu = 1
         print(f"Number of GPUs available: {args.n_gpu}")
         breakpoint()
     else:
         jittor.flags.use_cuda = 1
-        device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
+        #device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
         # jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
         args.n_gpu = 1
-    args.device = device
-    args.nprocs = jittor.cuda.device_count()
+    #args.device = device
+    args.nprocs =len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
 
 
     # Setup logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
-    logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s" %
-                   (args.local_rank, args.device, args.n_gpu, bool(args.local_rank != -1), args.fp16))
+    logger.warning("Process rank: %s,  n_gpu: %s, distributed training: %s, 16-bits training: %s" %(args.local_rank,  args.n_gpu, bool(args.local_rank != -1), args.fp16))
 
     # Set seed
     set_seed(args)

@@ -6,7 +6,7 @@ import jittor as jt
 from jittor.dataset import Dataset
 from jittor.transform import Compose, Resize, RandomCrop, RandomHorizontalFlip, ToTensor, CenterCrop
 
-from .dataset import CUB, CarsDataset, NABirds, dogs, INat2017
+from .dataset_jt import CUB, CarsDataset, NABirds, dogs, INat2017
 from .autoaugment import AutoAugImageNetPolicy
 
 logger = logging.getLogger(__name__)
