@@ -1,3 +1,7 @@
 *.npz
 /pretrained_dir
 *.pyc
+*.jpg
+/logs
+*txt
+*.bin

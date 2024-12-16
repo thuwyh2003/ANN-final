@@ -17,7 +17,7 @@ from datetime import timedelta
 from tqdm import tqdm
 #from torch.utils.tensorboard import SummaryWriter
 # from jittor import vis
-import jittorvis as vis
+# import jittorvis as vis
 #from apex import amp
 #from apex.parallel import DistributedDataParallel as DDP
 
@@ -25,7 +25,8 @@ from models.modeling_jt import VisionTransformer, CONFIGS
 from utils.scheduler_jt import WarmupLinearSchedule, WarmupCosineSchedule
 from utils.data_utils_jt import get_loader
 from utils.dist_util_jt import get_world_size
-
+from tensorboardX import SummaryWriter       #wyh
+# from jittor import logger
 logger = logging.getLogger(__name__)
 
 class AverageMeter(object):
@@ -97,7 +98,7 @@ def setup(args):
         model.load_state_dict(pretrained_model)'''
         pretrained_model = jittor.load(args.pretrained_model)['model']
         model.load_parameters(pretrained_model)
-    model.to(args.device)
+    # model.to(args.device)
     num_params = count_parameters(model)
 
     logger.info("{}".format(config))
@@ -113,8 +114,8 @@ def set_seed(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     jittor.set_global_seed(args.seed)
-    if args.n_gpu > 0:
-        jittor.set_global_seed(args.seed)
+    # if args.n_gpu > 0:                     #暂时取消，用单卡跑
+    #     jittor.set_global_seed(args.seed)
 
 def valid(args, model, writer, test_loader, global_step):
     # Validation!
@@ -183,7 +184,7 @@ def train(args, model):
     """ Train the model """
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
-    writer = vis.SummaryWriter(log_dir=os.path.join("logs", args.name))
+    writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
 
     args.train_batch_size = args.train_batch_size // args.gradient_accumulation_steps
 
@@ -404,32 +405,32 @@ def main():
     args.device = device
     args.nprocs = torch.cuda.device_count()'''
     
-   
-    from datetime import timedelta
+    jittor.flags.use_cuda=1
+    # from datetime import timedelta
 
-    if args.local_rank == -1:
-        if jittor.backends.cuda.is_available():
-            jittor.flags.use_cuda = 1 
-            args.n_gpu = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
-        else:
-            jittor.flags.use_cuda = 0
-            args.n_gpu = 1
-        print(f"Number of GPUs available: {args.n_gpu}")
-        breakpoint()
-    else:
-        jittor.flags.use_cuda = 1
-        #device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
-        # jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
-        args.n_gpu = 1
-    #args.device = device
-    args.nprocs =len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
+    # if args.local_rank == -1:
+    #     if jittor.backends.cuda.is_available():
+    #         jittor.flags.use_cuda = 1 
+    #         args.n_gpu = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
+    #     else:
+    #         jittor.flags.use_cuda = 0
+    #         args.n_gpu = 1
+    #     print(f"Number of GPUs available: {args.n_gpu}")
+    #     breakpoint()
+    # else:
+    #     jittor.flags.use_cuda = 1
+    #     #device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
+    #     # jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
+    #     args.n_gpu = 1
+    # #args.device = device
+    # args.nprocs =len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))      #暂时取消，用单卡跑
 
 
     # Setup logging
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-                        datefmt='%m/%d/%Y %H:%M:%S',
-                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
-    logger.warning("Process rank: %s,  n_gpu: %s, distributed training: %s, 16-bits training: %s" %(args.local_rank,  args.n_gpu, bool(args.local_rank != -1), args.fp16))
+    # logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',     #暂时取消，用单卡跑
+    #                     datefmt='%m/%d/%Y %H:%M:%S',
+    #                     level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
+    # logger.warning("Process rank: %s,  n_gpu: %s, distributed training: %s, 16-bits training: %s" %(args.local_rank,  args.n_gpu, bool(args.local_rank != -1), args.fp16))
 
     # Set seed
     set_seed(args)
