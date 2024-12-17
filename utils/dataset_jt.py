@@ -24,13 +24,8 @@ from jittor.dataset import Dataset
 # from torchvision.datasets.utils import download_url, list_dir, check_integrity, extract_archive, verify_str_arg
 
 class CUB(Dataset):# WYH
-<<<<<<< HEAD
     def __init__(self, root, is_train=True, batch_size=1, shuffle=True,  transform=None):
         super(CUB,self).__init__(root,is_train, batch_size, shuffle,transform)
-=======
-    def __init__(self, root, is_train=True, data_len=None, transform=None):
-        super().__init__()
->>>>>>> 9553d4dbf081e8deca1b70b9a8696191a1d365b4
         self.root = root
         self.is_train = is_train
         self.transform = transform
