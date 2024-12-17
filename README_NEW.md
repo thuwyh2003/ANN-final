@@ -31,16 +31,24 @@ TODO:
 
 1. [X]  MLP Block
 2. [X]  Encoder Block
-3. [ ]  Vision Transformer
-4. [ ]  Patch embedding
-5. [ ]  Multi-head Attention
-6. [ ]  PSM（part attention）
+3. [X]  Vision Transformer
+4. [X]  Patch embedding
+5. [X]  Multi-head Attention
+6. [X]  PSM（part attention）
 
 持续更新memo，这是我在操作的时候总结的一些问题，hopefully，能给大家提供帮助
 
 ## 12.15
+
 崔灏睿 修改部分bug
 分布式训练代码api存在问题
+
 ```
 CUDA_VISIBLE_DEVICES=0 torchrun --nnodes=1  --nproc_per_node=4   train_jt.py --dataset CUB_200_2011 --split overlap --num_steps 10000 --fp16 --name sample_run --pretrained_dir pretrained_dir/imagenet21k_ViT-B_32.npz
 ```
+
+12.17
+
+汪钰涵
+
+python3 train_jt.py --dataset CUB_200_2011 --split overlap --num_steps 10000 --fp16 --name sample_run --pretrained_dir /home/wyh/ANN/TransFG/imagenet21k_ViT-B_16.npz

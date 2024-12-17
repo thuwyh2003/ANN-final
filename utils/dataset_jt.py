@@ -23,7 +23,7 @@ from jittor.dataset import Dataset
 # from torchvision.datasets.folder import default_loader
 # from torchvision.datasets.utils import download_url, list_dir, check_integrity, extract_archive, verify_str_arg
 
-class CUB():# same
+class CUB(Dataset):# WYH
     def __init__(self, root, is_train=True, data_len=None, transform=None):
         self.root = root
         self.is_train = is_train
@@ -32,6 +32,9 @@ class CUB():# same
         label_txt_file = open(os.path.join(self.root, 'image_class_labels.txt'))
         train_val_file = open(os.path.join(self.root, 'train_test_split.txt'))
         img_name_list = []
+        
+        self.set_attrs()    #wyh
+        
         for line in img_txt_file:
             img_name_list.append(line[:-1].split(' ')[-1])
         label_list = []
@@ -56,6 +59,7 @@ class CUB():# same
                     test_file_list[:data_len]]               #WYH
             self.test_label = [x for i, x in zip(train_test_list, label_list) if not i][:data_len]
             self.test_imgname = [x for x in test_file_list[:data_len]]
+            
     def __getitem__(self, index):
         if self.is_train:
             img, target, imgname = self.train_img[index], self.train_label[index], self.train_imgname[index]

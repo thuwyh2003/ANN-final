@@ -66,7 +66,7 @@ class Attention(nn.Module):
         self.num_attn_heads=config.transformer["num_heads"]
         self.attn_heads_size=int(config.hidden_size / self.num_attn_heads)
         self.scale=self.attn_heads_size ** -0.5
-        self.all_head_size = self.num_attention_heads * self.attention_head_size
+        self.all_head_size = self.num_attn_heads * self.attn_heads_size
 
         self.query = nn.Linear(config.hidden_size, self.all_head_size)
         self.key = nn.Linear(config.hidden_size, self.all_head_size)
@@ -103,7 +103,7 @@ class EncoderBlock(nn.Module):
         self.attention_norm=nn.LayerNorm(config.hidden_size,eps=1e-5)
         self.ffn_norm=nn.LayerNorm(config.hidden_size,eps=1e-5)
         self.ffn=Mlp(config)
-        
+        self.hidden_size=config.hidden_size
     def execute(self,x):
         h=x
         x=self.attention_norm(x)
@@ -120,39 +120,45 @@ class EncoderBlock(nn.Module):
     def load_from(self, weights, n_block):
         ROOT = f"Transformer/encoderblock_{n_block}"
         with jt.no_grad():
-            query_weight = np2th(weights[pjoin(ROOT, ATTENTION_Q, "kernel")]).view(self.hidden_size, self.hidden_size).t()
-            key_weight = np2th(weights[pjoin(ROOT, ATTENTION_K, "kernel")]).view(self.hidden_size, self.hidden_size).t()
-            value_weight = np2th(weights[pjoin(ROOT, ATTENTION_V, "kernel")]).view(self.hidden_size, self.hidden_size).t()
-            out_weight = np2th(weights[pjoin(ROOT, ATTENTION_OUT, "kernel")]).view(self.hidden_size, self.hidden_size).t()
+            query_weight = np2th(weights[pjoin(ROOT, ATTENTION_Q , "kernel")]).reshape(self.hidden_size, self.hidden_size).t()
+            key_weight = np2th(weights[pjoin(ROOT, ATTENTION_K, "kernel")]).reshape(self.hidden_size, self.hidden_size).t()
+            value_weight = np2th(weights[pjoin(ROOT, ATTENTION_V, "kernel")]).reshape(self.hidden_size, self.hidden_size).t()
+            out_weight = np2th(weights[pjoin(ROOT, ATTENTION_OUT, "kernel")]).reshape(self.hidden_size, self.hidden_size).t()
 
-            query_bias = np2th(weights[pjoin(ROOT, ATTENTION_Q, "bias")]).view(-1)
-            key_bias = np2th(weights[pjoin(ROOT, ATTENTION_K, "bias")]).view(-1)
-            value_bias = np2th(weights[pjoin(ROOT, ATTENTION_V, "bias")]).view(-1)
-            out_bias = np2th(weights[pjoin(ROOT, ATTENTION_OUT, "bias")]).view(-1)
+            query_bias = np2th(weights[pjoin(ROOT, ATTENTION_Q, "bias")]).reshape(-1)
+            key_bias = np2th(weights[pjoin(ROOT, ATTENTION_K, "bias")]).reshape(-1)
+            value_bias = np2th(weights[pjoin(ROOT, ATTENTION_V, "bias")]).reshape(-1)
+            out_bias = np2th(weights[pjoin(ROOT, ATTENTION_OUT, "bias")]).reshape(-1)
 
-            self.attn.query.weight.copy_(query_weight)
-            self.attn.key.weight.copy_(key_weight)
-            self.attn.value.weight.copy_(value_weight)
-            self.attn.out.weight.copy_(out_weight)
-            self.attn.query.bias.copy_(query_bias)
-            self.attn.key.bias.copy_(key_bias)
-            self.attn.value.bias.copy_(value_bias)
-            self.attn.out.bias.copy_(out_bias)
+            self.attn.query.weight.assign(query_weight)
+            self.attn.key.weight.assign(key_weight)
+            self.attn.value.weight.assign(value_weight)
+            self.attn.out.weight.assign(out_weight)
+            self.attn.query.bias.assign(query_bias)
+            self.attn.key.bias.assign(key_bias)
+            self.attn.value.bias.assign(value_bias)
+            self.attn.out.bias.assign(out_bias)
 
-            mlp_weight_0 = np2th(weights[pjoin(ROOT, FC_0, "kernel")]).t()
-            mlp_weight_1 = np2th(weights[pjoin(ROOT, FC_1, "kernel")]).t()
-            mlp_bias_0 = np2th(weights[pjoin(ROOT, FC_0, "bias")]).t()
-            mlp_bias_1 = np2th(weights[pjoin(ROOT, FC_1, "bias")]).t()
+            # mlp_weight_0 = np2th(weights[pjoin(ROOT, FC_0, "kernel")]).t()
+            # mlp_weight_1 = np2th(weights[pjoin(ROOT, FC_1, "kernel")]).t()
+            
+            # mlp_bias_0 = np2th(weights[pjoin(ROOT, FC_0, "bias")]).t()
+            # mlp_bias_1 = np2th(weights[pjoin(ROOT, FC_1, "bias")]).t()
+            mlp_weight_0 = np2th(weights[pjoin(ROOT, FC_0, "kernel")])
+            mlp_weight_1 = np2th(weights[pjoin(ROOT, FC_1, "kernel")])
+            
+            mlp_bias_0 = np2th(weights[pjoin(ROOT, FC_0, "bias")])
+            mlp_bias_1 = np2th(weights[pjoin(ROOT, FC_1, "bias")])
 
-            self.ffn.fc1.weight.copy_(mlp_weight_0)
-            self.ffn.fc2.weight.copy_(mlp_weight_1)
-            self.ffn.fc1.bias.copy_(mlp_bias_0)
-            self.ffn.fc2.bias.copy_(mlp_bias_1)
+            self.ffn.fc1.weight.assign(mlp_weight_0)
+            self.ffn.fc2.weight.assign(mlp_weight_1)
+            self.ffn.fc1.bias.assign(mlp_bias_0)
+            self.ffn.fc2.bias.assign(mlp_bias_1)
 
-            self.attention_norm.weight.copy_(np2th(weights[pjoin(ROOT, ATTENTION_NORM, "scale")]))
-            self.attention_norm.bias.copy_(np2th(weights[pjoin(ROOT, ATTENTION_NORM, "bias")]))
-            self.ffn_norm.weight.copy_(np2th(weights[pjoin(ROOT, MLP_NORM, "scale")]))
-            self.ffn_norm.bias.copy_(np2th(weights[pjoin(ROOT, MLP_NORM, "bias")]))
+            self.attention_norm.weight.assign(np2th(weights[pjoin(ROOT, ATTENTION_NORM, "scale")]))
+            self.attention_norm.bias.assign(np2th(weights[pjoin(ROOT, ATTENTION_NORM, "bias")]))
+            self.ffn_norm.weight.assign(np2th(weights[pjoin(ROOT, MLP_NORM, "scale")]))
+            self.ffn_norm.bias.assign(np2th(weights[pjoin(ROOT, MLP_NORM, "bias")]))
 
     
 class Encoder(nn.Module):
@@ -188,15 +194,15 @@ class Embeddings(nn.Module):
     def __init__(self,config,img_size,in_channels=3):
         super(Embeddings,self).__init__()
         img_size=_pair(img_size)
-        patch_size=_pair(config.patch_size["size"])
+        patch_size=_pair(config.patches["size"])
         self.img_size=img_size
         self.patch_size=patch_size
         self.cls_token=jt.zeros((1,1,config.hidden_size))
-        self.pos_embed=jt.zeros((1,num_patches+1,config.hidden_size))
+        
         self.pos_drop=nn.Dropout(config.transformer["dropout_rate"])
         # non-overlap split
         if config.split == 'non-overlap':
-            num_patchs=int(img_size[1]/patch_size[1]) * int(img_size[0]/patch_size[0])
+            num_patches=int(img_size[1]/patch_size[1]) * int(img_size[0]/patch_size[0])
             self.patch_embeddings=nn.Conv(in_channels,config.hidden_size,kernel_size=patch_size,stride=patch_size)
             
         if config.split == 'overlap':
@@ -205,7 +211,7 @@ class Embeddings(nn.Module):
                                         out_channels=config.hidden_size,
                                         kernel_size=patch_size,
                                         stride=(config.slide_step, config.slide_step))
-            
+        self.pos_embed=jt.zeros((1,num_patches+1,config.hidden_size))   
     def execute(self,x):
         B,C,H,W=x.shape
         assert H == self.img_size[0] and W == self.img_size[1],f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})"
@@ -308,11 +314,11 @@ class VisionTransformer(nn.Module):
         
     def load_from(self, weights):
         with jt.no_grad():
-            self.transformer.embeddings.patch_embeddings.weight.copy_(np2th(weights["embedding/kernel"], conv=True))
-            self.transformer.embeddings.patch_embeddings.bias.copy_(np2th(weights["embedding/bias"]))
-            self.transformer.embeddings.cls_token.copy_(np2th(weights["cls"]))
-            self.transformer.encoder.part_norm.weight.copy_(np2th(weights["Transformer/encoder_norm/scale"]))
-            self.transformer.encoder.part_norm.bias.copy_(np2th(weights["Transformer/encoder_norm/bias"]))
+            self.transformer.embeddings.patch_embeddings.weight.assign(np2th(weights["embedding/kernel"], conv=True))
+            self.transformer.embeddings.patch_embeddings.bias.assign(np2th(weights["embedding/bias"]))
+            self.transformer.embeddings.cls_token.assign(np2th(weights["cls"]))
+            self.transformer.encoder.part_norm.weight.assign(np2th(weights["Transformer/encoder_norm/scale"]))
+            self.transformer.encoder.part_norm.bias.assign(np2th(weights["Transformer/encoder_norm/bias"]))
 
             posemb = np2th(weights["Transformer/posembed_input/pos_embedding"])
             posemb_new = self.transformer.embeddings.pos_embed
@@ -337,7 +343,7 @@ class VisionTransformer(nn.Module):
                 posemb_grid = ndimage.zoom(posemb_grid, zoom, order=1)
                 posemb_grid = posemb_grid.reshape(1, gs_new * gs_new, -1)
                 posemb = np.concatenate([posemb_tok, posemb_grid], axis=1)
-                self.transformer.embeddings.pos_embed.copy_(np2th(posemb))
+                self.transformer.embeddings.pos_embed.assign(np2th(posemb))
 
             for bname, block in self.transformer.encoder.named_children():
                 if bname.startswith('part') == False:
