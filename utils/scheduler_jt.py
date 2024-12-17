@@ -40,6 +40,9 @@ class WarmupCosineSchedule(object):
         self.t_total = t_total
         self.cycles = cycles
         self.optimizer = optimizer
+        for group in optimizer.param_groups:
+            for param in group["params"]:
+                print(param)
         self.base_lrs = [group['initial_lr'] for group in optimizer.param_groups]
         self.last_epoch = last_epoch
 

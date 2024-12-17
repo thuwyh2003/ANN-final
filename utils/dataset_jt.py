@@ -25,6 +25,7 @@ from jittor.dataset import Dataset
 
 class CUB(Dataset):# WYH
     def __init__(self, root, is_train=True, data_len=None, transform=None):
+        super().__init__()
         self.root = root
         self.is_train = is_train
         self.transform = transform
