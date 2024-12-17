@@ -31,8 +31,8 @@ def get_loader(args):
     if args.dataset == 'CUB_200_2011':
         train_transform = build_transform(True, 600, 448)
         test_transform = build_transform(False, 600, 448)
-        trainset = CUB(root=args.data_root, is_train=True, transform=train_transform)
-        testset = CUB(root=args.data_root, is_train=False, transform=test_transform)
+        train_loader = CUB(root=args.data_root, is_train=True, transform=train_transform,shuffle=True, batch_size=args.train_batch_size)
+        test_loader = CUB(root=args.data_root, is_train=False, transform=test_transform,shuffle=False,batch_size=args.eval_batch_size)
     elif args.dataset == 'car':
         trainset = CarsDataset(os.path.join(args.data_root, 'devkit/cars_train_annos.mat'),
                                os.path.join(args.data_root, 'cars_train'),
@@ -61,16 +61,17 @@ def get_loader(args):
     if args.local_rank == 0:
         jt.sync_all()
 
-    train_loader = trainset.set_attrs(
-        batch_size=args.train_batch_size,
-        shuffle=(args.local_rank == -1),
-        num_workers=4,
-        drop_last=True
-    )
-    test_loader = testset.set_attrs(
-        batch_size=args.eval_batch_size,
-        shuffle=False,
-        num_workers=4
-    ) if testset is not None else None
+    # train_loader = trainset.set_attrs(
+    #     batch_size=args.train_batch_size,
+    #     shuffle=(args.local_rank == -1),
+    #     num_workers=4,
+    #     drop_last=True
+    # )
+    # test_loader = testset.set_attrs(
+    #     batch_size=args.eval_batch_size,
+    #     shuffle=False,
+    #     num_workers=4
+    # ) if testset is not None else None
 
     return train_loader, test_loader
+    # return trainset,testset

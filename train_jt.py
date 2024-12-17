@@ -202,12 +202,12 @@ def train(args, model):
     else:
         scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
 
-    if args.fp16:
-        '''model, optimizer = amp.initialize(models=model,
-                                          optimizers=optimizer,
-                                          opt_level=args.fp16_opt_level)
-        amp._amp_state.loss_scalers[0]._loss_scale = 2**20'''
-        jittor.flags.use_fp16 = True
+    # if args.fp16:
+    #     '''model, optimizer = amp.initialize(models=model,
+    #                                       optimizers=optimizer,
+    #                                       opt_level=args.fp16_opt_level)
+    #     amp._amp_state.loss_scalers[0]._loss_scale = 2**20'''
+    #     jittor.flags.use_fp16 = True                                 #AttributeError: 'jittor_core.Flags' object has no attribute 'use_fp16'
 
     # Distributed training
     if args.local_rank != -1:
@@ -222,7 +222,7 @@ def train(args, model):
                     jittor.get_device_count() if jittor.has_cuda else 1))
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
 
-    model.zero_grad()
+    # model.zero_grad()     #      有问题
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
     losses = AverageMeter()
     global_step, best_acc = 0, 0

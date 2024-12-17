@@ -40,7 +40,8 @@ class WarmupCosineSchedule(object):
         self.t_total = t_total
         self.cycles = cycles
         self.optimizer = optimizer
-        self.base_lrs = [group['initial_lr'] for group in optimizer.param_groups]
+        # self.base_lrs = [group['initial_lr'] for group in optimizer.param_groups]        #  没看懂什么意思
+        self.base_lrs = [0.03 for i in range(self.t_total)]      #WYH
         self.last_epoch = last_epoch
 
     def step(self):
