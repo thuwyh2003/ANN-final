@@ -3,7 +3,7 @@ from PIL import Image
 import os
 
 import jittor as jt
-from jittor.dataset import Dataset
+from jittor.dataset.dataset import Dataset
 from jittor.transform import Compose, Resize, RandomCrop, RandomHorizontalFlip, ToTensor, CenterCrop
 
 from .dataset_jt import CUB, CarsDataset, NABirds, dogs, INat2017
