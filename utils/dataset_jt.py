@@ -55,7 +55,7 @@ class CUB(Dataset):# WYH
             self.train_label = [x for i, x in zip(train_test_list, label_list) if i][:data_len]
             self.train_imgname = [x for x in train_file_list[:data_len]]
             self.total_len=len(self.train_label)
-            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len, shuffle=self.shuffle)
+            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len, shuffle=self.shuffle,num_workers=0)
         if not self.is_train:
             data_len=len(test_file_list)
             # self.test_img = [scipy.misc.imread(os.path.join(self.root, 'images', test_file)) for test_file in
@@ -65,7 +65,7 @@ class CUB(Dataset):# WYH
             self.test_label = [x for i, x in zip(train_test_list, label_list) if not i][:data_len]
             self.test_imgname = [x for x in test_file_list[:data_len]]
             self.total_len=len(self.test_label)
-            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len, shuffle=self.shuffle)
+            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len,shuffle=self.shuffle,num_workers=0)
             
     def __getitem__(self, index):
         if self.is_train:

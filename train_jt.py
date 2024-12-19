@@ -422,7 +422,7 @@ def main():
     #     #device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
     #     # jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
     #     args.n_gpu = 1
-    # #args.device = device
+    args.device = 'cuda'
     # args.nprocs =len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))      #暂时取消，用单卡跑
 
 

@@ -43,13 +43,13 @@ class Mlp(nn.Module):
         self.fc2=nn.Linear(config.transformer["mlp_dim"],config.hidden_size)
         self.drop=nn.Dropout(config.transformer["dropout_rate"])
         
-        self._init_weights()
+        # self._init_weights()
 
-    def _init_weights(self):
-        jt.init.xavier_uniform_(self.fc1.weight)
-        jt.init.xavier_uniform_(self.fc2.weight)
-        jt.init.gauss_(self.fc1.bias, mean=0.0,std=1e-6)
-        jt.init.gauss_(self.fc2.bias, mean=0.0,std=1e-6)
+    # def _init_weights(self):
+    #     jt.init.xavier_uniform_(self.fc1.weight)
+    #     jt.init.xavier_uniform_(self.fc2.weight)
+    #     jt.init.gauss_(self.fc1.bias, mean=0.0,std=1e-6)
+    #     jt.init.gauss_(self.fc2.bias, mean=0.0,std=1e-6)
     
     def execute(self,x):
         x=self.fc1(x)
@@ -172,7 +172,7 @@ class Encoder(nn.Module):
         self.part_layer = EncoderBlock(config)
         self.part_norm = nn.LayerNorm(config.hidden_size, eps=1e-6)
 
-    def forward(self, hidden_states):
+    def execute(self, hidden_states):
         attn_weights = []
         for layer in self.layer:
             hidden_states, weights = layer(hidden_states)
@@ -198,7 +198,7 @@ class Embeddings(nn.Module):
         self.img_size=img_size
         self.patch_size=patch_size
         self.cls_token=jt.zeros((1,1,config.hidden_size))
-        
+
         self.pos_drop=nn.Dropout(config.transformer["dropout_rate"])
         # non-overlap split
         if config.split == 'non-overlap':
@@ -221,8 +221,8 @@ class Embeddings(nn.Module):
         cls_tokens=self.cls_token.expand((B,i,j))
         x = jt.concat((cls_tokens, x), dim=1)
 
-        embeddings = x + self.position_embeddings
-        embeddings = self.dropout(embeddings)
+        embeddings = x + self.pos_embed
+        embeddings = self.pos_drop(embeddings)
         return embeddings
     
     
@@ -241,7 +241,7 @@ class LabelSmoothing(nn.Module):
         self.confidence = 1.0 - smoothing
         self.smoothing = smoothing
 
-    def forward(self, x, target):
+    def execute(self, x, target):
         logprobs = jt.nn.log_softmax(x, dim=-1)
 
         nll_loss = -logprobs.gather(dim=-1, index=target.unsqueeze(1))
@@ -256,7 +256,7 @@ class Transformer(nn.Module):
         self.embeddings = Embeddings(config, img_size=img_size)
         self.encoder = Encoder(config)
 
-    def forward(self, input_ids):
+    def execute(self, input_ids):
         embedding_output = self.embeddings(input_ids)
         part_encoded = self.encoder(embedding_output)
         return part_encoded
@@ -283,7 +283,7 @@ class VisionTransformer(nn.Module):
         #     EncoderBlock(config)
         #     for i in range(config.transformer["num_layers"]-1)
         # ])
-    def forward(self,x,labels=None):
+    def execute(self,x,labels=None):
         # B=x.shape[0]
         # x=self.patch_embeddings(x)
         # _,i,j=self.cls_token.shape
@@ -367,7 +367,7 @@ class Part_Attention(nn.Module):
     def __init__(self):
         super(Part_Attention, self).__init__()
 
-    def forward(self, x):
+    def execute(self, x):
         length = len(x)
         last_map = x[0]
         for i in range(1, length):
