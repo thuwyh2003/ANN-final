@@ -140,4 +140,4 @@ def get_loader(args):
         # pin_memory=True
     ) if testset is not None else None
 
-    return train_loader, test_loader
+    return trainset, testset

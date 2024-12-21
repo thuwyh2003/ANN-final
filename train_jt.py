@@ -238,7 +238,11 @@ def train(args, model):
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
             x, y = batch
-
+            import pdb
+            pdb.set_trace()
+            x = x[0]
+            import pdb
+            pdb.set_trace()
             loss, logits = model(x, y)
             loss = loss.mean()
 

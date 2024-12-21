@@ -52,6 +52,8 @@ class Mlp(nn.Module):
     #     jt.init.gauss_(self.fc2.bias, mean=0.0,std=1e-6)
     
     def execute(self,x):
+        import pdb
+        pdb.set_trace()
         x=self.fc1(x)
         x=self.act(x)
         x=self.drop(x)
@@ -175,6 +177,8 @@ class Encoder(nn.Module):
     def execute(self, hidden_states):
         attn_weights = []
         for layer in self.layer:
+            import pdb
+            pdb.set_trace()
             hidden_states, weights = layer(hidden_states)
             attn_weights.append(weights)            
         part_num, part_inx = self.part_select(attn_weights)
@@ -213,6 +217,7 @@ class Embeddings(nn.Module):
                                         stride=(config.slide_step, config.slide_step))
         self.pos_embed=jt.zeros((1,num_patches+1,config.hidden_size))   
     def execute(self,x):
+
         B,C,H,W=x.shape
         assert H == self.img_size[0] and W == self.img_size[1],f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})"
         x=self.patch_embeddings(x).flatten(2).transpose(0,2,1)
@@ -257,8 +262,11 @@ class Transformer(nn.Module):
         self.encoder = Encoder(config)
 
     def execute(self, input_ids):
+
         embedding_output = self.embeddings(input_ids)
+
         part_encoded = self.encoder(embedding_output)
+
         return part_encoded
 
 
@@ -297,7 +305,9 @@ class VisionTransformer(nn.Module):
         #     x=block(x)
         
         # part_logits=self.part_head(x[:,0])
+
         part_tokens = self.transformer(x)
+
         part_logits = self.part_head(part_tokens[:, 0])
         
         if labels is not None:
