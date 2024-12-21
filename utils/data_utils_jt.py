@@ -127,7 +127,7 @@ def get_loader(args):
         trainset,
         batch_size=args.train_batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=0,
         drop_last=True,
         # pin_memory=True
     )
@@ -136,7 +136,7 @@ def get_loader(args):
         testset,
         batch_size=args.eval_batch_size,
         shuffle = False,
-        num_workers=4,
+        num_workers=0,
         # pin_memory=True
     ) if testset is not None else None
 
