@@ -46,8 +46,14 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+
+
 def simple_accuracy(preds, labels):
-    return (preds == labels).mean()
+    correct = (preds == labels)
+    import pdb
+    pdb.set_trace()
+    return correct.mean()
+
 
 def reduce_mean(tensor, nprocs):
     rt = tensor.clone()
@@ -91,13 +97,16 @@ def setup(args):
         num_classes = 5089
 
     model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes,smoothing_value=args.smoothing_value)
-
+    #print(model)
     model.load_from(np.load(args.pretrained_dir))
+    #print(model)
     if args.pretrained_model is not None:
         '''pretrained_model = torch.load(args.pretrained_model)['model']
         model.load_state_dict(pretrained_model)'''
         pretrained_model = jittor.load(args.pretrained_model)['model']
         model.load_parameters(pretrained_model)
+
+        
     # model.to(args.device)
     num_params = count_parameters(model)
 
@@ -137,6 +146,8 @@ def valid(args, model, writer, test_loader, global_step):
     for step, batch in enumerate(epoch_iterator):
         batch = tuple(t.to(args.device) for t in batch)
         x, y = batch
+
+        x=x[0]
         #with torch.no_grad():
         with jittor.no_grad():
             logits = model(x)
@@ -146,7 +157,7 @@ def valid(args, model, writer, test_loader, global_step):
             eval_losses.update(eval_loss.item())
 
             #preds = torch.argmax(logits, dim=-1)
-            preds = jittor.argmax(logits, dim=-1)
+            preds,_ = jittor.argmax(logits, dim=-1)
 
         if len(all_preds) == 0:
             all_preds.append(preds.detach().cpu().numpy())
@@ -159,7 +170,8 @@ def valid(args, model, writer, test_loader, global_step):
                 all_label[0], y.detach().cpu().numpy(), axis=0
             )
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
-
+    import pdb
+    pdb.set_trace()
     all_preds, all_label = all_preds[0], all_label[0]
     accuracy = simple_accuracy(all_preds, all_label)
     #accuracy = torch.tensor(accuracy).to(args.device)
@@ -222,7 +234,7 @@ def train(args, model):
                     jittor.get_device_count() if jittor.has_cuda else 1))
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
 
-    # model.zero_grad()     #      有问题
+     #      有问题
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
     losses = AverageMeter()
     global_step, best_acc = 0, 0
@@ -238,16 +250,16 @@ def train(args, model):
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
             x, y = batch
-            import pdb
-            pdb.set_trace()
+
             x = x[0]
-            import pdb
-            pdb.set_trace()
+
             loss, logits = model(x, y)
             loss = loss.mean()
 
             #preds = torch.argmax(logits, dim=-1)
-            preds = jittor.argmax(logits, dim=-1)
+            
+            preds,_ = jittor.argmax(logits, dim=-1)
+
             if len(all_preds) == 0:
                 all_preds.append(preds.detach().cpu().numpy())
                 all_label.append(y.detach().cpu().numpy())
@@ -266,7 +278,8 @@ def train(args, model):
                     scaled_loss.backward()
             else:
                 loss.backward()'''
-            loss.backward()
+
+            optimizer.backward(loss)
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 losses.update(loss.item()*args.gradient_accumulation_steps)
                 '''if args.fp16:
@@ -274,7 +287,8 @@ def train(args, model):
                 else:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                     '''
-                jittor.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                optimizer.clip_grad_norm(args.max_grad_norm)
+                
                 scheduler.step()
                 optimizer.step()
                 optimizer.zero_grad()
@@ -393,7 +407,7 @@ def main():
     args.data_root = '{}/{}'.format(args.data_root, args.dataset)
     # Setup CUDA, GPU & distributed training
     args.local_rank = int(os.environ.get('LOCAL_RANK', -1))     #WYH   不需要手动传输local_rank参数了。
-    print("local_rank",args.local_rank)
+    #print("local_rank",args.local_rank)
     '''
     if args.local_rank == -1:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
