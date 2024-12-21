@@ -22,20 +22,20 @@ def get_loader(args):
 
     if args.dataset == 'CUB_200_2011':
         train_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600),Image.BILINEAR),
             transform.RandomCrop((448, 448)),
             transform.RandomHorizontalFlip(),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         test_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600),Image.BILINEAR),
             transform.CenterCrop((448, 448)),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
-        trainset = CUB(root=args.data_root, is_train=True, transform=train_transform)
-        testset = CUB(root=args.data_root, is_train=False, transform=test_transform)
+        trainset = CUB(root=args.data_root, shuffle=True,is_train=True, transform=train_transform)
+        testset = CUB(root=args.data_root, batch_size=args.eval_batch_size,shuffle=False,is_train=False, transform=test_transform)
 
     elif args.dataset == 'car':
         trainset = CarsDataset(
@@ -43,7 +43,7 @@ def get_loader(args):
             os.path.join(args.data_root, 'cars_train'),
             os.path.join(args.data_root, 'devkit/cars_meta.mat'),
             transform=transform.Compose([
-                transform.Resize((600, 600)),
+                transform.Resize((600, 600), Image.BILINEAR),
                 transform.RandomCrop((448, 448)),
                 transform.RandomHorizontalFlip(),
                 AutoAugImageNetPolicy(),
@@ -56,7 +56,7 @@ def get_loader(args):
             os.path.join(args.data_root, 'cars_test'),
             os.path.join(args.data_root, 'devkit/cars_meta.mat'),
             transform=transform.Compose([
-                transform.Resize((600, 600)),
+                transform.Resize((600, 600), Image.BILINEAR),
                 transform.CenterCrop((448, 448)),
                 transform.ToTensor(),
                 Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -65,41 +65,41 @@ def get_loader(args):
 
     elif args.dataset == 'dog':
         train_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600), Image.BILINEAR),
             transform.RandomCrop((448, 448)),
             transform.RandomHorizontalFlip(),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         test_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600), Image.BILINEAR),
             transform.CenterCrop((448, 448)),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
-        trainset = dogs(root=args.data_root, train=True, cropped=False, transform=train_transform, download=False)
-        testset = dogs(root=args.data_root, train=False, cropped=False, transform=test_transform, download=False)
+        trainset = dogs(root=args.data_root, train=True,shuffle=True, cropped=False, transform=train_transform, download=False)
+        testset = dogs(root=args.data_root, train=False,shuffle=False,batch_size=args.eval_batch_size, cropped=False, transform=test_transform, download=False)
 
     elif args.dataset == 'nabirds':
         train_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600), Image.BILINEAR),
             transform.RandomCrop((448, 448)),
             transform.RandomHorizontalFlip(),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         test_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600), Image.BILINEAR),
             transform.CenterCrop((448, 448)),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
-        trainset = NABirds(root=args.data_root, train=True, transform=train_transform)
-        testset = NABirds(root=args.data_root, train=False, transform=test_transform)
+        trainset = NABirds(root=args.data_root, train=True,shuffle=True, transform=train_transform)
+        testset = NABirds(root=args.data_root, train=False,shuffle=False,batch_size=args.eval_batch_size, transform=test_transform)
 
     elif args.dataset == 'INat2017':
         train_transform = transform.Compose([
-            transform.Resize((400, 400)),
+            transform.Resize((400, 400), Image.BILINEAR),
             transform.RandomCrop((304, 304)),
             transform.RandomHorizontalFlip(),
             AutoAugImageNetPolicy(),
@@ -107,13 +107,13 @@ def get_loader(args):
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         test_transform = transform.Compose([
-            transform.Resize((400, 400)),
+            transform.Resize((400, 400), Image.BILINEAR),
             transform.CenterCrop((304, 304)),
             transform.ToTensor(),
             Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
-        trainset = INat2017(args.data_root, 'train', train_transform)
-        testset = INat2017(args.data_root, 'val', test_transform)
+        trainset = INat2017(root=args.data_root, split='train',shuffle=True, transform=train_transform)
+        testset = INat2017(root=args.data_root,split='val',shuffle=False,transform=test_transform)
 
     if args.local_rank == 0:
         jt.sync_all()
@@ -123,21 +123,21 @@ def get_loader(args):
     # test_sampler = jt.data.SequentialSampler(testset) if args.local_rank == -1 else jt.data.DistributedSampler(testset)
 
     # Create DataLoader instances
-    train_loader = DataLoader(
-        trainset,
-        batch_size=args.train_batch_size,
-        shuffle=True,
-        num_workers=0,
-        drop_last=True,
-        # pin_memory=True
-    )
+    # train_loader = DataLoader(
+    #     trainset,
+    #     batch_size=args.train_batch_size,
+    #     shuffle=True,
+    #     num_workers=0,
+    #     drop_last=True,
+    #     # pin_memory=True
+    # )
 
-    test_loader = DataLoader(
-        testset,
-        batch_size=args.eval_batch_size,
-        shuffle = False,
-        num_workers=0,
-        # pin_memory=True
-    ) if testset is not None else None
+    # test_loader = DataLoader(
+    #     testset,
+    #     batch_size=args.eval_batch_size,
+    #     shuffle = False,
+    #     num_workers=0,
+    #     # pin_memory=True
+    # ) if testset is not None else None
 
-    return train_loader, test_loader
+    return trainset, testset

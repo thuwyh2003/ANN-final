@@ -144,8 +144,8 @@ class EncoderBlock(nn.Module):
             
             # mlp_bias_0 = np2th(weights[pjoin(ROOT, FC_0, "bias")]).t()
             # mlp_bias_1 = np2th(weights[pjoin(ROOT, FC_1, "bias")]).t()
-            mlp_weight_0 = np2th(weights[pjoin(ROOT, FC_0, "kernel")])
-            mlp_weight_1 = np2th(weights[pjoin(ROOT, FC_1, "kernel")])
+            mlp_weight_0 = np2th(weights[pjoin(ROOT, FC_0, "kernel")]).t()
+            mlp_weight_1 = np2th(weights[pjoin(ROOT, FC_1, "kernel")]).t()
             
             mlp_bias_0 = np2th(weights[pjoin(ROOT, FC_0, "bias")])
             mlp_bias_1 = np2th(weights[pjoin(ROOT, FC_1, "bias")])
@@ -183,8 +183,15 @@ class Encoder(nn.Module):
         B, num = part_inx.shape
         for i in range(B):
             parts.append(hidden_states[i, part_inx[i,:]])
-        parts = jt.stack(parts).squeeze(1)
+        
+        parts_stack=jt.stack(parts)
+        
+        if parts_stack.shape[1]==1:
+            parts = parts_stack.squeeze(1)
+        else:
+            parts = parts_stack
         concat = jt.concat((hidden_states[:,0].unsqueeze(1), parts), dim=1)
+
         part_states, part_weights = self.part_layer(concat)
         part_encoded = self.part_norm(part_states)   
 
@@ -211,11 +218,17 @@ class Embeddings(nn.Module):
                                         out_channels=config.hidden_size,
                                         kernel_size=patch_size,
                                         stride=(config.slide_step, config.slide_step))
+        
         self.pos_embed=jt.zeros((1,num_patches+1,config.hidden_size))   
     def execute(self,x):
+
         B,C,H,W=x.shape
         assert H == self.img_size[0] and W == self.img_size[1],f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})"
-        x=self.patch_embeddings(x).flatten(2).transpose(0,2,1)
+
+        
+        x=self.patch_embeddings(x)
+        
+        x=x.flatten(2).transpose(0,2,1)
         
         _,i,j=self.cls_token.shape
         cls_tokens=self.cls_token.expand((B,i,j))
@@ -257,8 +270,11 @@ class Transformer(nn.Module):
         self.encoder = Encoder(config)
 
     def execute(self, input_ids):
+
         embedding_output = self.embeddings(input_ids)
+
         part_encoded = self.encoder(embedding_output)
+
         return part_encoded
 
 
@@ -297,7 +313,9 @@ class VisionTransformer(nn.Module):
         #     x=block(x)
         
         # part_logits=self.part_head(x[:,0])
+
         part_tokens = self.transformer(x)
+
         part_logits = self.part_head(part_tokens[:, 0])
         
         if labels is not None:
@@ -306,7 +324,8 @@ class VisionTransformer(nn.Module):
             else:
                 loss_fct = LabelSmoothing(self.smoothing_value)
             part_loss = loss_fct(part_logits.view(-1, self.num_classes), labels.view(-1))
-            contrast_loss = con_loss(x[:, 0], labels.view(-1))
+            
+            contrast_loss = con_loss(part_tokens[:, 0], labels.view(-1))
             loss = part_loss + contrast_loss
             return loss, part_logits
         else:
@@ -314,7 +333,9 @@ class VisionTransformer(nn.Module):
         
     def load_from(self, weights):
         with jt.no_grad():
+
             self.transformer.embeddings.patch_embeddings.weight.assign(np2th(weights["embedding/kernel"], conv=True))
+
             self.transformer.embeddings.patch_embeddings.bias.assign(np2th(weights["embedding/bias"]))
             self.transformer.embeddings.cls_token.assign(np2th(weights["cls"]))
             self.transformer.encoder.part_norm.weight.assign(np2th(weights["Transformer/encoder_norm/scale"]))
@@ -373,15 +394,17 @@ class Part_Attention(nn.Module):
         for i in range(1, length):
             last_map = jt.matmul(x[i], last_map)
         last_map = last_map[:,:,0,1:]
-
-        _, max_inx = last_map.max(2)
+        
+        #= last_map.max(2)
+        max_inx,_=jt.argmax(last_map,2)
         return _, max_inx
 
         
 def con_loss(features, labels):
-    B, _ = features.shape
+
+    B, _= features.shape
     features = jt.misc.normalize(features)
-    cos_matrix = features.mm(features.t())
+    cos_matrix = features.matmul(features.t())
     pos_label_matrix = jt.stack([labels == labels[i] for i in range(B)]).float()
     neg_label_matrix = 1 - pos_label_matrix
     pos_cos_matrix = 1 - cos_matrix

@@ -6,5 +6,11 @@
 *txt
 *.bin
 cs_yh.py
+/iNat2017
+/NABirds
+/stanford_cars
+/dog
+/CUB_200_2011
+/output
 dataset_jt_wyh.py
 .gitignore

@@ -114,6 +114,7 @@ class Mlp(nn.Module):
     def __init__(self, config):
         super(Mlp, self).__init__()
         self.fc1 = Linear(config.hidden_size, config.transformer["mlp_dim"])
+
         self.fc2 = Linear(config.transformer["mlp_dim"], config.hidden_size)
         self.act_fn = ACT2FN["gelu"]
         self.dropout = Dropout(config.transformer["dropout_rate"])
@@ -269,7 +270,9 @@ class Encoder(nn.Module):
         B, num = part_inx.shape
         for i in range(B):
             parts.append(hidden_states[i, part_inx[i,:]])
+        
         parts = torch.stack(parts).squeeze(1)
+
         concat = torch.cat((hidden_states[:,0].unsqueeze(1), parts), dim=1)
         part_states, part_weights = self.part_layer(concat)
         part_encoded = self.part_norm(part_states)   
