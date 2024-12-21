@@ -50,8 +50,7 @@ class AverageMeter(object):
 
 def simple_accuracy(preds, labels):
     correct = (preds == labels)
-    import pdb
-    pdb.set_trace()
+
     return correct.mean()
 
 
@@ -147,7 +146,7 @@ def valid(args, model, writer, test_loader, global_step):
         batch = tuple(t.to(args.device) for t in batch)
         x, y = batch
 
-        x=x[0]
+        x=x.squeeze(1)
         #with torch.no_grad():
         with jittor.no_grad():
             logits = model(x)
@@ -170,23 +169,22 @@ def valid(args, model, writer, test_loader, global_step):
                 all_label[0], y.detach().cpu().numpy(), axis=0
             )
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
-    import pdb
-    pdb.set_trace()
+
     all_preds, all_label = all_preds[0], all_label[0]
     accuracy = simple_accuracy(all_preds, all_label)
     #accuracy = torch.tensor(accuracy).to(args.device)
     accuracy = jittor.array(accuracy).to(args.device)
 
     #dist.barrier()
-    jittor.distributed.barrier()
-    val_accuracy = reduce_mean(accuracy, args.nprocs)
-    val_accuracy = val_accuracy.detach().cpu().numpy()
+    #jittor.distributed.barrier()
+    #val_accuracy = reduce_mean(accuracy, args.nprocs)
+    val_accuracy = accuracy.detach().cpu().numpy()
 
     logger.info("\n")
-    logger.info("Validation Results")
-    logger.info("Global Steps: %d" % global_step)
-    logger.info("Valid Loss: %2.5f" % eval_losses.avg)
-    logger.info("Valid Accuracy: %2.5f" % val_accuracy)
+    print("Validation Results")
+    print("Global Steps: %d" % global_step)
+    print("Valid Loss: %2.5f" % eval_losses.avg)
+    print("Valid Accuracy: %2.5f" % val_accuracy)
     if args.local_rank in [-1, 0]:
         writer.add_scalar("test/accuracy", scalar_value=val_accuracy, global_step=global_step)
         
@@ -251,7 +249,7 @@ def train(args, model):
             batch = tuple(t.to(args.device) for t in batch)
             x, y = batch
 
-            x = x[0]
+            x = x.squeeze(1)
 
             loss, logits = model(x, y)
             loss = loss.mean()
@@ -321,14 +319,14 @@ def train(args, model):
         jittor.distributed.barrier()
         train_accuracy = reduce_mean(accuracy, args.nprocs)
         train_accuracy = train_accuracy.detach().cpu().numpy()
-        logger.info("train accuracy so far: %f" % train_accuracy)
+        print("train accuracy so far: %f" % train_accuracy)
         losses.reset()
         if global_step % t_total == 0:
             break
 
     writer.close()
-    logger.info("Best Accuracy: \t%f" % best_acc)
-    logger.info("End Training!")
+    print("Best Accuracy: \t%f" % best_acc)
+    print("End Training!")
     end_time = time.time()
     logger.info("Total Training Time: \t%f" % ((end_time - start_time) / 3600))
 
