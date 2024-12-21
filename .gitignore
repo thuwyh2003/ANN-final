@@ -6,3 +6,5 @@
 *txt
 *.bin
 cs_yh.py
+dataset_jt_wyh.py
+.gitignore
