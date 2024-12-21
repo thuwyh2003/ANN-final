@@ -57,7 +57,7 @@ def simple_accuracy(preds, labels):
 def reduce_mean(tensor, nprocs):
     rt = tensor.clone()
     #dist.all_reduce(rt, op=dist.ReduceOp.SUM)
-    jittor.distributed.all_reduce(rt, op=jittor.distributed.ReduceOp.SUM)
+    # jittor.distributed.all_reduce(rt, op=jittor.distributed.ReduceOp.SUM)
     rt /= nprocs
     return rt
 
@@ -316,9 +316,9 @@ def train(args, model):
         #accuracy = torch.tensor(accuracy).to(args.device)
         accuracy = jittor.array(accuracy).to(args.device)
         #dist.barrier()
-        jittor.distributed.barrier()
-        train_accuracy = reduce_mean(accuracy, args.nprocs)
-        train_accuracy = train_accuracy.detach().cpu().numpy()
+        # jittor.distributed.barrier()
+        # train_accuracy = reduce_mean(accuracy, 1)
+        train_accuracy = accuracy.detach().cpu().numpy()
         print("train accuracy so far: %f" % train_accuracy)
         losses.reset()
         if global_step % t_total == 0:

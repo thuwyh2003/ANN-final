@@ -224,16 +224,21 @@ class dogs(Dataset):
     def __init__(self,
                  root,
                  train=True,
+                 batch_size=1,
+                 shuffle=True,
                  cropped=False,
                  transform=None,
                  target_transform=None,
                  download=False):
 
         # self.root = join(os.path.expanduser(root), self.folder)
+        super(dogs,self).__init__(root,train, batch_size, shuffle,transform)
         self.root = root
         self.train = train
         self.cropped = cropped
         self.transform = transform
+        self.shuffle = shuffle
+        self.batch_size = batch_size
         self.target_transform = target_transform
 
         if download:
@@ -477,12 +482,14 @@ class NABirds(Dataset):
     """
     base_folder = 'nabirds/images'
 
-    def __init__(self, root, train=True, transform=None):
+    def __init__(self, root, shuffle=True,batch_size=1,train=True, transform=None):
+        super(NABirds,self).__init__(root,train, batch_size, shuffle,transform)
         dataset_path = os.path.join(root, 'nabirds')
         self.root = root
         self.loader = default_loader
         self.train = train
         self.transform = transform
+        self.shuffle = shuffle
 
         image_paths = pd.read_csv(os.path.join(dataset_path, 'images.txt'),
                                   sep=' ', names=['img_id', 'filepath'])
@@ -650,13 +657,18 @@ class INat2017(Dataset):
                  root, 
                  split='train', 
                  transform=None, 
+                 shuffle=True,
+                 batch_size=1,
                  target_transform=None, 
                  download=False):
         # super(INat2017, self).__init__(root, transform=transform, target_transform=target_transform)
+        super(CUB,self).__init__(root,batch_size, shuffle,transform)
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
         self.loader = default_loader
+        self.batch_size = batch_size
+        self.shuffle = shuffle
         self.split = verify_str_arg(split, "split", ("train", "val",))
 
         if self._check_exists():
