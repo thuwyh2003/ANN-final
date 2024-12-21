@@ -136,7 +136,8 @@ def valid(args, model, writer, test_loader, global_step):
             eval_losses.update(eval_loss.item())
 
             preds = torch.argmax(logits, dim=-1)
-
+        import pdb
+        pdb.set_trace()
         if len(all_preds) == 0:
             all_preds.append(preds.detach().cpu().numpy())
             all_label.append(y.detach().cpu().numpy())
@@ -150,6 +151,8 @@ def valid(args, model, writer, test_loader, global_step):
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
     all_preds, all_label = all_preds[0], all_label[0]
+    import pdb
+    pdb.set_trace()
     accuracy = simple_accuracy(all_preds, all_label)
     accuracy = torch.tensor(accuracy).to(args.device)
     dist.barrier()
