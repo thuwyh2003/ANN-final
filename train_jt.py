@@ -127,6 +127,7 @@ def set_seed(args):
 
 def valid(args, model, writer, test_loader, global_step):
     # Validation!
+    jittor.flags.use_cuda=1
     eval_losses = AverageMeter()
 
     logger.info("***** Running Validation *****")
@@ -192,6 +193,7 @@ def valid(args, model, writer, test_loader, global_step):
 
 def train(args, model):
     """ Train the model """
+    jittor.flags.use_cuda=1
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
