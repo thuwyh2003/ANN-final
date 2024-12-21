@@ -12,3 +12,5 @@ cs_yh.py
 /dog
 /CUB_200_2011
 /output
+dataset_jt_wyh.py
+.gitignore
