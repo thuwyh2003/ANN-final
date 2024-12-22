@@ -93,7 +93,7 @@ class CUB(Dataset):# WYH
 
 class CarsDataset(Dataset):
 
-    def __init__(self, mat_anno, data_dir, car_names, cleaned=None, transform=None):
+    def __init__(self, mat_anno, data_dir, car_names, shuffle=True,batch_size=1,cleaned=None, transform=None):
         """
         Args:
             mat_anno (string): Path to the MATLAB annotation file.
@@ -120,6 +120,9 @@ class CarsDataset(Dataset):
 
         self.data_dir = data_dir
         self.transform = transform
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
 
     def __len__(self):
         return len(self.car_annotations)
@@ -262,6 +265,7 @@ class dogs(Dataset):
             self._breed_images = [(annotation+'.jpg', idx) for annotation, idx in split]
 
             self._flat_breed_images = self._breed_images
+        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
 
         self.classes = ["Chihuaha",
                         "Japanese Spaniel",
@@ -506,6 +510,7 @@ class NABirds(Dataset):
             self.data = self.data[self.data.is_training_img == 1]
         else:
             self.data = self.data[self.data.is_training_img == 0]
+        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
 
         # Load in the class data
         self.class_names = load_class_names(dataset_path)
@@ -687,6 +692,7 @@ class INat2017(Dataset):
         anno_filename = split + '2017.json'
         with open(os.path.join(self.root, anno_filename), 'r') as fp:
             all_annos = json.load(fp)
+        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
 
         self.annos = all_annos['annotations']
         self.images = all_annos['images']
