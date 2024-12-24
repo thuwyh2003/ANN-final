@@ -25,12 +25,12 @@ from jittor.dataset.dataset import Dataset
 
 class CUB(Dataset):# WYH
     def __init__(self, root, is_train=True, batch_size=1, shuffle=False,  transform=None):
-        super(CUB,self).__init__(root,is_train, batch_size, shuffle,transform)
+        super(CUB,self).__init__(root,is_train, batch_size, False,transform)
         self.root = root
         self.is_train = is_train
         self.transform = transform
         self.batch_size = batch_size
-        self.shuffle=shuffle
+        self.shuffle=False
         img_txt_file = open(os.path.join(self.root, 'images.txt'))
         label_txt_file = open(os.path.join(self.root, 'image_class_labels.txt'))
         train_val_file = open(os.path.join(self.root, 'train_test_split.txt'))
@@ -241,7 +241,6 @@ class dogs(Dataset):
                  download=False):
 
         # self.root = join(os.path.expanduser(root), self.folder)
-        super(dogs,self).__init__(root,train, batch_size, shuffle,transform)
         self.root = root
         self.train = train
         self.cropped = cropped
@@ -492,8 +491,7 @@ class NABirds(Dataset):
     """
     base_folder = 'nabirds/images'
 
-    def __init__(self, root, shuffle=True,batch_size=1,train=True, transform=None):
-        super(NABirds,self).__init__(root,train, batch_size, shuffle,transform)
+    def __init__(self, root, shuffle=False,batch_size=1,train=True, transform=None):
         dataset_path = os.path.join(root, 'nabirds')
         self.root = root
         self.loader = default_loader
@@ -668,12 +666,11 @@ class INat2017(Dataset):
                  root, 
                  split='train', 
                  transform=None, 
-                 shuffle=True,
+                 shuffle=False,
                  batch_size=1,
                  target_transform=None, 
                  download=False):
         # super(INat2017, self).__init__(root, transform=transform, target_transform=target_transform)
-        super(CUB,self).__init__(root,batch_size, shuffle,transform)
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
