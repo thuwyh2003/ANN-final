@@ -100,6 +100,7 @@ def setup(args):
 
 def count_parameters(model):
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("params",params)
     return params/1000000
 
 def set_seed(args):
@@ -150,17 +151,18 @@ def valid(args, model, writer, test_loader, global_step):
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
     all_preds, all_label = all_preds[0], all_label[0]
+
     accuracy = simple_accuracy(all_preds, all_label)
     accuracy = torch.tensor(accuracy).to(args.device)
-    dist.barrier()
-    val_accuracy = reduce_mean(accuracy, args.nprocs)
-    val_accuracy = val_accuracy.detach().cpu().numpy()
+    #dist.barrier()
+    #val_accuracy = reduce_mean(accuracy, args.nprocs)
+    val_accuracy = accuracy.detach().cpu().numpy()
 
     logger.info("\n")
-    logger.info("Validation Results")
-    logger.info("Global Steps: %d" % global_step)
-    logger.info("Valid Loss: %2.5f" % eval_losses.avg)
-    logger.info("Valid Accuracy: %2.5f" % val_accuracy)
+    print("Validation Results")
+    print("Global Steps: %d" % global_step)
+    print("Valid Loss: %2.5f" % eval_losses.avg)
+    print("Valid Accuracy: %2.5f" % val_accuracy)
     if args.local_rank in [-1, 0]:
         writer.add_scalar("test/accuracy", scalar_value=val_accuracy, global_step=global_step)
         
@@ -176,6 +178,7 @@ def train(args, model):
 
     # Prepare dataset
     train_loader, test_loader = get_loader(args)
+
 
     # Prepare optimizer and scheduler
     optimizer = torch.optim.SGD(model.parameters(),
@@ -212,6 +215,8 @@ def train(args, model):
     losses = AverageMeter()
     global_step, best_acc = 0, 0
     start_time = time.time()
+    for name, p in model.named_parameters(): 
+        print(name)
     while True:
         model.train()
         epoch_iterator = tqdm(train_loader,
@@ -223,8 +228,11 @@ def train(args, model):
         for step, batch in enumerate(epoch_iterator):
             batch = tuple(t.to(args.device) for t in batch)
             x, y = batch
+            
 
+            
             loss, logits = model(x, y)
+
             loss = loss.mean()
 
             preds = torch.argmax(logits, dim=-1)
@@ -247,6 +255,7 @@ def train(args, model):
                     scaled_loss.backward()
             else:
                 loss.backward()
+            gradients = {}
 
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 losses.update(loss.item()*args.gradient_accumulation_steps)
@@ -258,14 +267,15 @@ def train(args, model):
                 optimizer.step()
                 optimizer.zero_grad()
                 global_step += 1
-
+                for param_group in optimizer.param_groups:
+                    print(f"Current learning rate: {param_group['lr']}")
                 epoch_iterator.set_description(
                     "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
                 )
                 if args.local_rank in [-1, 0]:
                     writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
                     writer.add_scalar("train/lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
-                if global_step % args.eval_every == 0:
+                '''if global_step % args.eval_every == 0:
                     with torch.no_grad():
                         accuracy = valid(args, model, writer, test_loader, global_step)
                     if args.local_rank in [-1, 0]:
@@ -273,24 +283,26 @@ def train(args, model):
                             save_model(args, model)
                             best_acc = accuracy
                         logger.info("best accuracy so far: %f" % best_acc)
+                
                     model.train()
-
+                '''
                 if global_step % t_total == 0:
                     break
+        valid(args, model, writer, test_loader, global_step)
         all_preds, all_label = all_preds[0], all_label[0]
         accuracy = simple_accuracy(all_preds, all_label)
         accuracy = torch.tensor(accuracy).to(args.device)
-        dist.barrier()
-        train_accuracy = reduce_mean(accuracy, args.nprocs)
-        train_accuracy = train_accuracy.detach().cpu().numpy()
-        logger.info("train accuracy so far: %f" % train_accuracy)
+        #dist.barrier()
+        #train_accuracy = reduce_mean(accuracy, args.nprocs)
+        train_accuracy = accuracy.detach().cpu().numpy()
+        print("train accuracy so far: %f" % train_accuracy)
         losses.reset()
         if global_step % t_total == 0:
             break
 
     writer.close()
-    logger.info("Best Accuracy: \t%f" % best_acc)
-    logger.info("End Training!")
+    print("Best Accuracy: \t%f" % best_acc)
+    print("End Training!")
     end_time = time.time()
     logger.info("Total Training Time: \t%f" % ((end_time - start_time) / 3600))
 
@@ -338,8 +350,8 @@ def main():
     parser.add_argument("--max_grad_norm", default=1.0, type=float,
                         help="Max gradient norm.")
 
-    # parser.add_argument("--local_rank", type=int, default=-1,
-    #                     help="local_rank for distributed training on gpus")
+    parser.add_argument("--local-rank", type=int, default=-1,
+                        help="local-rank for distributed training on gpus")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
@@ -368,7 +380,7 @@ def main():
     #     raise NotImplementedError("label smoothing not supported for fp16 training now")
     args.data_root = '{}/{}'.format(args.data_root, args.dataset)
     # Setup CUDA, GPU & distributed training
-    args.local_rank = int(os.environ.get('LOCAL_RANK', -1))     #WYH   不需要手动传输local_rank参数了。
+    args.local_rank = -1     #WYH   不需要手动传输local_rank参数了。
     if args.local_rank == -1:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         args.n_gpu = torch.cuda.device_count()
@@ -396,6 +408,7 @@ def main():
 
     # Model & Tokenizer Setup
     args, model = setup(args)
+    args.fp16=False
     # Training
     train(args, model)
 

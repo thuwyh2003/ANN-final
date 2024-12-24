@@ -52,3 +52,5 @@ CUDA_VISIBLE_DEVICES=0 torchrun --nnodes=1  --nproc_per_node=4   train_jt.py --d
 汪钰涵
 
 python3 train_jt.py --dataset CUB_200_2011 --split overlap --num_steps 10000 --fp16 --name sample_run --pretrained_dir /home/wyh/ANN/TransFG/imagenet21k_ViT-B_16.npz
+
+python3 train_jt.py --dataset CUB_200_2011 --split overlap --num_steps 10000 --fp16 --name sample_run --pretrained_dir ../pretrained_dir/imagenet21k_ViT-B_16.npz

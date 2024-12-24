@@ -8,9 +8,9 @@ import os
 import random
 import numpy as np
 import time
-import jittor
-from datetime import timedelta
 
+from datetime import timedelta
+import jittor as jt
 #import torch
 #import torch.distributed as dist
 
@@ -49,28 +49,15 @@ class AverageMeter(object):
 def simple_accuracy(preds, labels):
     return (preds == labels).mean()
 
-def reduce_mean(tensor, nprocs):
-    rt = tensor.clone()
-    #dist.all_reduce(rt, op=dist.ReduceOp.SUM)
-    jittor.distributed.all_reduce(rt, op=jittor.distributed.ReduceOp.SUM)
-    rt /= nprocs
-    return rt
+
 
 def save_model(args, model):
     model_to_save = model.module if hasattr(model, 'module') else model
     model_checkpoint = os.path.join(args.output_dir, "%s_checkpoint.bin" % args.name)
-    if args.fp16:
-        checkpoint = {
-            'model': model_to_save.state_dict(),
-            #'amp': amp.state_dict()
-            'amp': jittor.float16
-        }
-    else:
-        checkpoint = {
+    checkpoint = {
             'model': model_to_save.state_dict(),
         }
-    #torch.save(checkpoint, model_checkpoint)
-    jittor.save(checkpoint, model_checkpoint)
+    jt.save(checkpoint, model_checkpoint)
     logger.info("Saved model checkpoint to [DIR: %s]", args.output_dir)
 
 def setup(args):
@@ -90,15 +77,13 @@ def setup(args):
     elif args.dataset == "INat2017":
         num_classes = 5089
 
-    model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes,smoothing_value=args.smoothing_value)
+    model = VisionTransformer(config, args.img_size, zero_head=True, num_classes=num_classes,                                                   smoothing_value=args.smoothing_value)
 
     model.load_from(np.load(args.pretrained_dir))
     if args.pretrained_model is not None:
-        '''pretrained_model = torch.load(args.pretrained_model)['model']
-        model.load_state_dict(pretrained_model)'''
-        pretrained_model = jittor.load(args.pretrained_model)['model']
-        model.load_parameters(pretrained_model)
-    # model.to(args.device)
+        pretrained_model = jt.load(args.pretrained_model)['model']
+        model.load_state_dict(pretrained_model)
+
     num_params = count_parameters(model)
 
     logger.info("{}".format(config))
@@ -107,15 +92,15 @@ def setup(args):
     return args, model
 
 def count_parameters(model):
+    for p in model.parameters():
+        p.start_grad()
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("params",params)
     return params/1000000
 
 def set_seed(args):
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    jittor.set_global_seed(args.seed)
-    # if args.n_gpu > 0:                     #暂时取消，用单卡跑
-    #     jittor.set_global_seed(args.seed)
+    jt.misc.set_global_seed(args.seed)
+    
 
 def valid(args, model, writer, test_loader, global_step):
     # Validation!
@@ -132,21 +117,18 @@ def valid(args, model, writer, test_loader, global_step):
                           bar_format="{l_bar}{r_bar}",
                           dynamic_ncols=True,
                           disable=args.local_rank not in [-1, 0])
-    #loss_fct = torch.nn.CrossEntropyLoss()
-    loss_fct = jittor.nn.CrossEntropyLoss()
+    loss_fct = jt.nn.CrossEntropyLoss()
     for step, batch in enumerate(epoch_iterator):
-        batch = tuple(t.to(args.device) for t in batch)
+        batch = tuple(t for t in batch)
         x, y = batch
-        #with torch.no_grad():
-        with jittor.no_grad():
+        with jt.no_grad():
             logits = model(x)
 
             eval_loss = loss_fct(logits, y)
             eval_loss = eval_loss.mean()
             eval_losses.update(eval_loss.item())
 
-            #preds = torch.argmax(logits, dim=-1)
-            preds = jittor.argmax(logits, dim=-1)
+            preds,_ = jt.argmax(logits, dim=-1)
 
         if len(all_preds) == 0:
             all_preds.append(preds.detach().cpu().numpy())
@@ -161,20 +143,18 @@ def valid(args, model, writer, test_loader, global_step):
         epoch_iterator.set_description("Validating... (loss=%2.5f)" % eval_losses.val)
 
     all_preds, all_label = all_preds[0], all_label[0]
-    accuracy = simple_accuracy(all_preds, all_label)
-    #accuracy = torch.tensor(accuracy).to(args.device)
-    accuracy = jittor.array(accuracy).to(args.device)
 
+    accuracy = simple_accuracy(all_preds, all_label)
+    accuracy =jt.array(accuracy)
     #dist.barrier()
-    jittor.distributed.barrier()
-    val_accuracy = reduce_mean(accuracy, args.nprocs)
-    val_accuracy = val_accuracy.detach().cpu().numpy()
+    #val_accuracy = reduce_mean(accuracy, args.nprocs)
+    val_accuracy = accuracy.detach().cpu().numpy()
 
     logger.info("\n")
-    logger.info("Validation Results")
-    logger.info("Global Steps: %d" % global_step)
-    logger.info("Valid Loss: %2.5f" % eval_losses.avg)
-    logger.info("Valid Accuracy: %2.5f" % val_accuracy)
+    print("Validation Results")
+    print("Global Steps: %d" % global_step)
+    print("Valid Loss: %2.5f" % eval_losses.avg)
+    print("Valid Accuracy: %2.5f" % val_accuracy)
     if args.local_rank in [-1, 0]:
         writer.add_scalar("test/accuracy", scalar_value=val_accuracy, global_step=global_step)
         
@@ -191,8 +171,9 @@ def train(args, model):
     # Prepare dataset
     train_loader, test_loader = get_loader(args)
 
+
     # Prepare optimizer and scheduler
-    optimizer = jittor.optim.SGD(model.parameters(),
+    optimizer = jt.optim.SGD(model.parameters(),
                                 lr=args.learning_rate,
                                 momentum=0.9,
                                 weight_decay=args.weight_decay)
@@ -202,31 +183,14 @@ def train(args, model):
     else:
         scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
 
-    # if args.fp16:
-    #     '''model, optimizer = amp.initialize(models=model,
-    #                                       optimizers=optimizer,
-    #                                       opt_level=args.fp16_opt_level)
-    #     amp._amp_state.loss_scalers[0]._loss_scale = 2**20'''
-    #     jittor.flags.use_fp16 = True                                 #AttributeError: 'jittor_core.Flags' object has no attribute 'use_fp16'
+ 
 
-    # Distributed training
-    if args.local_rank != -1:
-        #model = DDP(model, message_size=250000000, gradient_predivide_factor=get_world_size())
-        model = jittor.nn.DataParallel(model)
-    # Train!
-    logger.info("***** Running training *****")
-    logger.info("  Total optimization steps = %d", args.num_steps)
-    logger.info("  Instantaneous batch size per GPU = %d", args.train_batch_size)
-    logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                args.train_batch_size * args.gradient_accumulation_steps * (
-                    jittor.get_device_count() if jittor.has_cuda else 1))
-    logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
-
-    # model.zero_grad()     #      有问题
-    set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
+    set_seed(args)  
     losses = AverageMeter()
     global_step, best_acc = 0, 0
     start_time = time.time()
+    for name, p in model.named_parameters(): 
+        print(name)
     while True:
         model.train()
         epoch_iterator = tqdm(train_loader,
@@ -236,14 +200,17 @@ def train(args, model):
                               disable=args.local_rank not in [-1, 0])
         all_preds, all_label = [], []
         for step, batch in enumerate(epoch_iterator):
-            batch = tuple(t.to(args.device) for t in batch)
+            batch = tuple(t for t in batch)
             x, y = batch
+            
 
+            
             loss, logits = model(x, y)
+
             loss = loss.mean()
 
-            #preds = torch.argmax(logits, dim=-1)
-            preds = jittor.argmax(logits, dim=-1)
+            preds,_ = jt.argmax(logits, dim=-1)
+
             if len(all_preds) == 0:
                 all_preds.append(preds.detach().cpu().numpy())
                 all_label.append(y.detach().cpu().numpy())
@@ -257,67 +224,62 @@ def train(args, model):
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
-            '''if args.fp16:
-                with amp.scale_loss(loss, optimizer) as scaled_loss:
-                    scaled_loss.backward()
-            else:
-                loss.backward()'''
-            loss.backward()
+            
+            optimizer.backward(loss)
+            gradients = {}
+
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 losses.update(loss.item()*args.gradient_accumulation_steps)
-                '''if args.fp16:
-                    torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
-                else:
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
-                    '''
-                jittor.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                optimizer.clip_grad_norm( args.max_grad_norm,2)
                 scheduler.step()
                 optimizer.step()
                 optimizer.zero_grad()
                 global_step += 1
-
+                
                 epoch_iterator.set_description(
                     "Training (%d / %d Steps) (loss=%2.5f)" % (global_step, t_total, losses.val)
                 )
                 if args.local_rank in [-1, 0]:
                     writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
                     writer.add_scalar("train/lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
-                if global_step % args.eval_every == 0:
-                    #with torch.no_grad():
-                    with jittor.no_grad():
+                '''if global_step % args.eval_every == 0:
+                    with torch.no_grad():
                         accuracy = valid(args, model, writer, test_loader, global_step)
                     if args.local_rank in [-1, 0]:
                         if best_acc < accuracy:
                             save_model(args, model)
                             best_acc = accuracy
                         logger.info("best accuracy so far: %f" % best_acc)
+                
                     model.train()
-
+                '''
                 if global_step % t_total == 0:
                     break
+        valid_accuracy = valid(args, model, writer, test_loader, global_step)
+        if best_acc < valid_accuracy:
+            best_acc = valid_accuracy
         all_preds, all_label = all_preds[0], all_label[0]
         accuracy = simple_accuracy(all_preds, all_label)
-        #accuracy = torch.tensor(accuracy).to(args.device)
-        accuracy = jittor.array(accuracy).to(args.device)
+        accuracy = jt.array(accuracy)
         #dist.barrier()
-        jittor.distributed.barrier()
-        train_accuracy = reduce_mean(accuracy, args.nprocs)
-        train_accuracy = train_accuracy.detach().cpu().numpy()
-        logger.info("train accuracy so far: %f" % train_accuracy)
+        #train_accuracy = reduce_mean(accuracy, args.nprocs)
+        train_accuracy = accuracy.detach().cpu().numpy()
+        save_model(args, model)
+        print("train accuracy so far: %f" % train_accuracy)
         losses.reset()
         if global_step % t_total == 0:
             break
 
     writer.close()
-    logger.info("Best Accuracy: \t%f" % best_acc)
-    logger.info("End Training!")
+    print("Best Accuracy: \t%f" % best_acc)
+    print("End Training!")
     end_time = time.time()
     logger.info("Total Training Time: \t%f" % ((end_time - start_time) / 3600))
 
 def main():
-    #torch.cuda.empty_cache()      #WYH
+    jt.clean()      #WYH
     # torch.cuda.set_per_process_memory_fraction(0.9, device=torch.device(f'cuda:{local_rank}'))
-    jittor.clean()
+
     parser = argparse.ArgumentParser()
     # Required parameters
     parser.add_argument("--name", required=True,
@@ -358,8 +320,8 @@ def main():
     parser.add_argument("--max_grad_norm", default=1.0, type=float,
                         help="Max gradient norm.")
 
-    # parser.add_argument("--local_rank", type=int, default=-1,
-    #                     help="local_rank for distributed training on gpus")
+    parser.add_argument("--local-rank", type=int, default=-1,
+                        help="local-rank for distributed training on gpus")
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
@@ -388,55 +350,13 @@ def main():
     #     raise NotImplementedError("label smoothing not supported for fp16 training now")
     args.data_root = '{}/{}'.format(args.data_root, args.dataset)
     # Setup CUDA, GPU & distributed training
-    args.local_rank = int(os.environ.get('LOCAL_RANK', -1))     #WYH   不需要手动传输local_rank参数了。
-    print("local_rank",args.local_rank)
-    '''
-    if args.local_rank == -1:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        args.n_gpu = torch.cuda.device_count()
-        print(args.n_gpu)
-        breakpoint()
-    else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
-        torch.cuda.set_device(args.local_rank)
-        device = torch.device("cuda", args.local_rank)
-        torch.distributed.init_process_group(backend='nccl',
-                                             timeout=timedelta(minutes=60))
-        args.n_gpu = 1
-    args.device = device
-    args.nprocs = torch.cuda.device_count()'''
-    
-    jittor.flags.use_cuda=1
-    # from datetime import timedelta
-
-    # if args.local_rank == -1:
-    #     if jittor.backends.cuda.is_available():
-    #         jittor.flags.use_cuda = 1 
-    #         args.n_gpu = len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))
-    #     else:
-    #         jittor.flags.use_cuda = 0
-    #         args.n_gpu = 1
-    #     print(f"Number of GPUs available: {args.n_gpu}")
-    #     breakpoint()
-    # else:
-    #     jittor.flags.use_cuda = 1
-    #     #device = jittor.core.Device(jittor.core.CUDA, args.local_rank)
-    #     # jittor.distributed.init_process_group(backend='nccl', timeout=timedelta(minutes=60))
-    #     args.n_gpu = 1
-    args.device = 'cuda'
-    # args.nprocs =len(os.environ.get("CUDA_VISIBLE_DEVICES", "").split(","))      #暂时取消，用单卡跑
-
-
-    # Setup logging
-    # logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',     #暂时取消，用单卡跑
-    #                     datefmt='%m/%d/%Y %H:%M:%S',
-    #                     level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
-    # logger.warning("Process rank: %s,  n_gpu: %s, distributed training: %s, 16-bits training: %s" %(args.local_rank,  args.n_gpu, bool(args.local_rank != -1), args.fp16))
-
-    # Set seed
+    args.local_rank = -1     #WYH   不需要手动传输local_rank参数了。
+    jt.flags.use_cuda = 1
     set_seed(args)
 
     # Model & Tokenizer Setup
     args, model = setup(args)
+    args.fp16=False
     # Training
     train(args, model)
 

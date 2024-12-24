@@ -22,19 +22,21 @@ def get_loader(args):
 
     if args.dataset == 'CUB_200_2011':
         train_transform = transform.Compose([
-            transform.Resize((600, 600)),
+            transform.Resize((600, 600),Image.BILINEAR),
             transform.RandomCrop((448, 448)),
+            
             transform.RandomHorizontalFlip(),
             transform.ToTensor(),
-            Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transform.ImageNormalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
         test_transform = transform.Compose([
             transform.Resize((600, 600)),
             transform.CenterCrop((448, 448)),
             transform.ToTensor(),
-            Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            transform.ImageNormalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ])
-        trainset = CUB(root=args.data_root, is_train=True, transform=train_transform)
+        trainset = CUB(root=args.data_root, is_train=True,transform=train_transform)
+
         testset = CUB(root=args.data_root, is_train=False, transform=test_transform)
 
     elif args.dataset == 'car':
@@ -140,4 +142,4 @@ def get_loader(args):
         # pin_memory=True
     ) if testset is not None else None
 
-    return train_loader, test_loader
+    return trainset, test_loader

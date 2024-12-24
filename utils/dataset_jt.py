@@ -14,7 +14,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import urllib.request
 import hashlib
-
+import random
 # import torch
 # from torch.utils.data import Dataset
 import jittor as jt
@@ -31,6 +31,8 @@ class CUB(Dataset):# WYH
         self.transform = transform
         self.batch_size = batch_size
         self.shuffle=shuffle
+        self.true_index = np.arange(5994)
+        np.random.shuffle(self.true_index)
         img_txt_file = open(os.path.join(self.root, 'images.txt'))
         label_txt_file = open(os.path.join(self.root, 'image_class_labels.txt'))
         train_val_file = open(os.path.join(self.root, 'train_test_split.txt'))
@@ -68,6 +70,8 @@ class CUB(Dataset):# WYH
             self.set_attrs(batch_size=self.batch_size, total_len=self.total_len,shuffle=self.shuffle,num_workers=0)
             
     def __getitem__(self, index):
+
+        #index=self.true_index[index]
         if self.is_train:
             img, target, imgname = self.train_img[index], self.train_label[index], self.train_imgname[index]
             if len(img.shape) == 2:

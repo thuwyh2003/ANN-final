@@ -1,4 +1,3 @@
-#ANN-Final
 import logging
 import math
 import jittor.lr_scheduler as jt_scheduler
@@ -17,6 +16,7 @@ class WarmupLinearSchedule(object):
 
     def step(self):
         self.last_epoch += 1
+        self.optimizer.lr = self.get_lr()[0]
         # values = self.get_lr()
         # for param_group, lr in zip(self.optimizer.param_groups, values):
         #     param_group['lr'] = lr
@@ -46,6 +46,7 @@ class WarmupCosineSchedule(object):
 
     def step(self):
         self.last_epoch += 1
+        self.optimizer.lr = self.get_lr()[0]
         # values = self.get_lr()
         # for param_group, lr in zip(self.optimizer.param_groups, values):
         #     param_group['lr'] = lr
