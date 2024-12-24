@@ -24,7 +24,7 @@ from jittor.dataset.dataset import Dataset
 # from torchvision.datasets.utils import download_url, list_dir, check_integrity, extract_archive, verify_str_arg
 
 class CUB(Dataset):# WYH
-    def __init__(self, root, is_train=True, batch_size=1, shuffle=True,  transform=None):
+    def __init__(self, root, is_train=True, batch_size=1, shuffle=False,  transform=None):
         super(CUB,self).__init__(root,is_train, batch_size, shuffle,transform)
         self.root = root
         self.is_train = is_train
@@ -54,8 +54,14 @@ class CUB(Dataset):# WYH
                               train_file_list[:data_len]]   #WYH
             self.train_label = [x for i, x in zip(train_test_list, label_list) if i][:data_len]
             self.train_imgname = [x for x in train_file_list[:data_len]]
+            if self.shuffle:
+                indices = np.arange(data_len)
+                np.random.shuffle(indices)
+                self.train_img = [self.train_img[idx] for idx in indices]
+                self.train_label = [self.train_label[idx] for idx in indices]
+                self.train_imgname = [self.train_imgname[idx] for idx in indices]
             self.total_len=len(self.train_label)
-            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len, shuffle=self.shuffle,num_workers=0)
+            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len, shuffle=False,num_workers=0)
         if not self.is_train:
             data_len=len(test_file_list)
             # self.test_img = [scipy.misc.imread(os.path.join(self.root, 'images', test_file)) for test_file in
@@ -65,7 +71,7 @@ class CUB(Dataset):# WYH
             self.test_label = [x for i, x in zip(train_test_list, label_list) if not i][:data_len]
             self.test_imgname = [x for x in test_file_list[:data_len]]
             self.total_len=len(self.test_label)
-            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len,shuffle=self.shuffle,num_workers=0)
+            self.set_attrs(batch_size=self.batch_size, total_len=self.total_len,shuffle=False,num_workers=0)
             
     def __getitem__(self, index):
         if self.is_train:
@@ -93,7 +99,7 @@ class CUB(Dataset):# WYH
 
 class CarsDataset(Dataset):
 
-    def __init__(self, mat_anno, data_dir, car_names, shuffle=True,batch_size=1,cleaned=None, transform=None):
+    def __init__(self, mat_anno, data_dir, car_names, shuffle=False,batch_size=1,cleaned=None, transform=None):
         """
         Args:
             mat_anno (string): Path to the MATLAB annotation file.
@@ -122,7 +128,7 @@ class CarsDataset(Dataset):
         self.transform = transform
         self.batch_size = batch_size
         self.shuffle = shuffle
-        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
+        self.set_attrs(batch_size=self.batch_size, shuffle=False,num_workers=0)
 
     def __len__(self):
         return len(self.car_annotations)
@@ -228,7 +234,7 @@ class dogs(Dataset):
                  root,
                  train=True,
                  batch_size=1,
-                 shuffle=True,
+                 shuffle=False,
                  cropped=False,
                  transform=None,
                  target_transform=None,
@@ -265,7 +271,7 @@ class dogs(Dataset):
             self._breed_images = [(annotation+'.jpg', idx) for annotation, idx in split]
 
             self._flat_breed_images = self._breed_images
-        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
+        self.set_attrs(batch_size=self.batch_size, shuffle=False,num_workers=0)
 
         self.classes = ["Chihuaha",
                         "Japanese Spaniel",
@@ -510,7 +516,7 @@ class NABirds(Dataset):
             self.data = self.data[self.data.is_training_img == 1]
         else:
             self.data = self.data[self.data.is_training_img == 0]
-        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
+        self.set_attrs(batch_size=self.batch_size, shuffle=False,num_workers=0)
 
         # Load in the class data
         self.class_names = load_class_names(dataset_path)
@@ -692,7 +698,7 @@ class INat2017(Dataset):
         anno_filename = split + '2017.json'
         with open(os.path.join(self.root, anno_filename), 'r') as fp:
             all_annos = json.load(fp)
-        self.set_attrs(batch_size=self.batch_size, shuffle=self.shuffle,num_workers=0)
+        self.set_attrs(batch_size=self.batch_size, shuffle=False,num_workers=0)
 
         self.annos = all_annos['annotations']
         self.images = all_annos['images']

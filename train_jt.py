@@ -194,6 +194,8 @@ def valid(args, model, writer, test_loader, global_step):
 def train(args, model):
     """ Train the model """
     jittor.flags.use_cuda=1
+    for p in model.parameters():
+        p.start_grad()
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
@@ -300,16 +302,16 @@ def train(args, model):
                 if args.local_rank in [-1, 0]:
                     writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
                     writer.add_scalar("train/lr", scalar_value=scheduler.get_lr()[0], global_step=global_step)
-                if global_step % args.eval_every == 0:
-                    #with torch.no_grad():
-                    with jittor.no_grad():
-                        accuracy = valid(args, model, writer, test_loader, global_step)
-                    if args.local_rank in [-1, 0]:
-                        if best_acc < accuracy:
-                            save_model(args, model)
-                            best_acc = accuracy
-                        logger.info("best accuracy so far: %f" % best_acc)
-                    model.train()
+                # if global_step % args.eval_every == 0:
+                #     #with torch.no_grad():
+                #     with jittor.no_grad():
+                #         accuracy = valid(args, model, writer, test_loader, global_step)
+                #     if args.local_rank in [-1, 0]:
+                #         if best_acc < accuracy:
+                #             save_model(args, model)
+                #             best_acc = accuracy
+                #         logger.info("best accuracy so far: %f" % best_acc)
+                #     model.train()
 
                 if global_step % t_total == 0:
                     break
@@ -324,6 +326,14 @@ def train(args, model):
         print("train accuracy so far: %f" % train_accuracy)
         losses.reset()
         if global_step % t_total == 0:
+            with jittor.no_grad():
+                accuracy = valid(args, model, writer, test_loader, global_step)
+            if args.local_rank in [-1, 0]:
+                if best_acc < accuracy:
+                    save_model(args, model)
+                    best_acc = accuracy
+                logger.info("best accuracy so far: %f" % best_acc)
+            model.train()
             break
 
     writer.close()
