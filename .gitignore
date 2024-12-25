@@ -14,3 +14,5 @@ cs_yh.py
 /output
 dataset_jt_wyh.py
 .gitignore
+*.png
+lz_functions.py
